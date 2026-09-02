@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, CheckSquare, Lightbulb, HelpCircle, Tag, Download, RefreshCw, BarChart2, MapPin, Send, Bell } from 'lucide-react';
+import { Sparkles, CheckSquare, Lightbulb, HelpCircle, Tag, Download, RefreshCw, BarChart2, MapPin, Send, Bell, FileText, Presentation, GraduationCap } from 'lucide-react';
 import { JournalEntry } from '../types';
 
 interface InsightsPanelProps {
@@ -7,6 +7,9 @@ interface InsightsPanelProps {
   onGenerateSummary: () => Promise<void>;
   isSummarizing: boolean;
   onOpenNotifications?: () => void;
+  onOpenWorkspace?: () => void;
+  onOpenDeepResearch?: () => void;
+  onOpenScholar?: () => void;
 }
 
 export const InsightsPanel: React.FC<InsightsPanelProps> = ({
@@ -14,6 +17,9 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
   onGenerateSummary,
   isSummarizing,
   onOpenNotifications,
+  onOpenWorkspace,
+  onOpenDeepResearch,
+  onOpenScholar,
 }) => {
   if (!entry) {
     return null;
@@ -64,6 +70,16 @@ ${entry.messages
         </div>
 
         <div className="flex items-center gap-1.5">
+          {onOpenWorkspace && (
+            <button
+              id="open-workspace-insights-btn"
+              onClick={onOpenWorkspace}
+              className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+              title="Google Docs & Google Slides Integration"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+          )}
           {onOpenNotifications && (
             <button
               onClick={onOpenNotifications}
@@ -106,6 +122,46 @@ ${entry.messages
             <RefreshCw className={`w-3.5 h-3.5 ${isSummarizing ? 'animate-spin' : ''}`} />
             <span>{isSummarizing ? 'Analyzing & Synthesizing...' : entry.summary ? 'Regenerate Insights' : 'Synthesize Insights'}</span>
           </button>
+
+          {/* Quick Workspace & Deep Research Export Buttons */}
+          <div className="mt-2.5 pt-2.5 border-t border-indigo-100/80 flex flex-col gap-2">
+            {onOpenWorkspace && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onOpenWorkspace}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Google Docs</span>
+                </button>
+                <button
+                  onClick={onOpenWorkspace}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                >
+                  <Presentation className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Google Slides</span>
+                </button>
+              </div>
+            )}
+            {onOpenDeepResearch && (
+              <button
+                onClick={onOpenDeepResearch}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                <span>Deep Research Topic Deep Dive</span>
+              </button>
+            )}
+            {onOpenScholar && (
+              <button
+                onClick={onOpenScholar}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                <span>Search Google Scholar Index</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Location Sanctuary info if pinned */}

@@ -34,8 +34,8 @@ const THREAT_ZONES: ThreatZoneAnalysis[] = [
   },
   {
     zone: '5. Inter-System & Secrets',
-    threatDescription: 'API key leakage to client browsers, hardcoded credentials in source control.',
-    mitigationStrategy: 'Server-side API proxying for GEMINI_API_KEY with Secret Manager integration pattern; zero client-side exposure of secret AI credentials.',
+    threatDescription: 'API key leakage, unauthorized Google Workspace (Docs/Slides) mutations, SSRF in webhooks.',
+    mitigationStrategy: 'Server-side proxying for Gemini AI, in-memory client token caching for Google Workspace OAuth, explicit user confirmation dialogs before mutations, and SSRF private-IP blocking for webhook dispatches.',
     status: 'enforced',
   },
 ];

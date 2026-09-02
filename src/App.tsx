@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, UserRole } from './types';
+import { UserProfile, UserRole, JournalEntry } from './types';
 import {
   subscribeToAuthChanges,
   signInWithGoogle,
@@ -12,6 +12,9 @@ import { Dashboard } from './components/Dashboard';
 import { ThreatModelModal } from './components/ThreatModelModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { NotificationsModal } from './components/NotificationsModal';
+import { WorkspaceModal } from './components/WorkspaceModal';
+import { DeepResearchModal } from './components/DeepResearchModal';
+import { ScholarModal } from './components/ScholarModal';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -19,6 +22,10 @@ export default function App() {
   const [isThreatModalOpen, setIsThreatModalOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
+  const [isDeepResearchModalOpen, setIsDeepResearchModalOpen] = useState(false);
+  const [isScholarModalOpen, setIsScholarModalOpen] = useState(false);
+  const [activeEntryForWorkspace, setActiveEntryForWorkspace] = useState<JournalEntry | null>(null);
   const [newEntryTriggerKey, setNewEntryTriggerKey] = useState(0);
 
   useEffect(() => {
@@ -79,12 +86,19 @@ export default function App() {
             onOpenThreatModal={() => setIsThreatModalOpen(true)}
             onOpenAdminDashboard={() => setIsAdminDashboardOpen(true)}
             onOpenNotificationsModal={() => setIsNotificationsModalOpen(true)}
+            onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
+            onOpenDeepResearch={() => setIsDeepResearchModalOpen(true)}
+            onOpenScholarModal={() => setIsScholarModalOpen(true)}
             entryCount={0}
           />
           <Dashboard
             key={`${currentUser.uid}_${newEntryTriggerKey}`}
             user={currentUser}
             onOpenNotifications={() => setIsNotificationsModalOpen(true)}
+            onOpenWorkspace={() => setIsWorkspaceModalOpen(true)}
+            onOpenDeepResearch={() => setIsDeepResearchModalOpen(true)}
+            onOpenScholar={() => setIsScholarModalOpen(true)}
+            onActiveEntryChange={(entry) => setActiveEntryForWorkspace(entry)}
           />
         </>
       ) : (
@@ -116,6 +130,34 @@ export default function App() {
         isOpen={isNotificationsModalOpen}
         onClose={() => setIsNotificationsModalOpen(false)}
       />
+
+      {/* Google Workspace (Docs & Slides) Modal */}
+      {currentUser && (
+        <WorkspaceModal
+          isOpen={isWorkspaceModalOpen}
+          onClose={() => setIsWorkspaceModalOpen(false)}
+          activeEntry={activeEntryForWorkspace}
+          user={currentUser}
+        />
+      )}
+
+      {/* Gemini Deep Research Agent Modal */}
+      {currentUser && (
+        <DeepResearchModal
+          isOpen={isDeepResearchModalOpen}
+          onClose={() => setIsDeepResearchModalOpen(false)}
+          user={currentUser}
+        />
+      )}
+
+      {/* Google Scholar Academic Index Modal */}
+      {currentUser && (
+        <ScholarModal
+          isOpen={isScholarModalOpen}
+          onClose={() => setIsScholarModalOpen(false)}
+          user={currentUser}
+        />
+      )}
     </div>
   );
 }

@@ -89,6 +89,83 @@ export interface NotificationRule {
   dispatchCount: number;
 }
 
+export interface WorkspaceFileItem {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink?: string;
+  iconLink?: string;
+  modifiedTime?: string;
+}
+
+export interface WorkspaceExportResult {
+  fileId: string;
+  fileName: string;
+  webViewLink: string;
+  type: 'doc' | 'slides';
+  exportedAt: number;
+}
+
+export interface DeepResearchStep {
+  type: string;
+  text?: string;
+  thought?: string;
+  signature?: string;
+  callName?: string;
+  timestamp?: number;
+}
+
+export interface DeepResearchSession {
+  id: string;
+  prompt: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  report?: string;
+  error?: string;
+  steps: DeepResearchStep[];
+  startedAt: number;
+  completedAt?: number;
+  visualization?: string;
+}
+
+export interface ScholarArticle {
+  title: string;
+  authors: string[];
+  pubYear: string | number;
+  venue: string;
+  citations: number;
+  url: string;
+  snippet?: string;
+  abstract?: string;
+}
+
+export interface AuthorPublication {
+  title: string;
+  year?: string | number;
+  citations?: number;
+  venue?: string;
+  url?: string;
+}
+
+export interface ScholarAuthorProfile {
+  name: string;
+  affiliation: string;
+  interests: string[];
+  citedby: number;
+  hindex: number;
+  i10index: number;
+  publications: AuthorPublication[];
+  coauthors?: string[];
+  profileUrl?: string;
+  avatarUrl?: string;
+}
+
+export interface ScholarSearchResponse {
+  keyword: string;
+  articles: ScholarArticle[];
+  totalResults: number;
+  searchedAt: number;
+}
+
 export interface NotificationDispatchResult {
   ruleId: string;
   channel: NotificationChannel;

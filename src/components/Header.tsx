@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Shield, LogOut, Plus, User as UserIcon, Bell, ShieldAlert } from 'lucide-react';
+import { Sparkles, Shield, LogOut, Plus, User as UserIcon, Bell, ShieldAlert, FileText, Database, GraduationCap } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
@@ -9,6 +9,9 @@ interface HeaderProps {
   onOpenThreatModal: () => void;
   onOpenAdminDashboard: () => void;
   onOpenNotificationsModal: () => void;
+  onOpenWorkspaceModal?: () => void;
+  onOpenDeepResearch?: () => void;
+  onOpenScholarModal?: () => void;
   entryCount: number;
 }
 
@@ -19,6 +22,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenThreatModal,
   onOpenAdminDashboard,
   onOpenNotificationsModal,
+  onOpenWorkspaceModal,
+  onOpenDeepResearch,
+  onOpenScholarModal,
   entryCount,
 }) => {
   return (
@@ -35,6 +41,10 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
                 Gemini 3.6 Flash
               </span>
+              <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                <Database className="w-3 h-3 text-emerald-600" />
+                Firestore Live
+              </span>
             </div>
             <p className="text-[11px] text-slate-500 font-medium hidden md:block">
               Private Journaling &amp; Cognitive Reflection
@@ -44,6 +54,45 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {/* Scholar Academic Index Button */}
+          {onOpenScholarModal && (
+            <button
+              id="scholar-header-btn"
+              onClick={onOpenScholarModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
+              title="Google Scholar Academic Index (scholarly + pandas)"
+            >
+              <GraduationCap className="w-4 h-4 text-blue-600" />
+              <span className="hidden sm:inline">Scholar Index</span>
+            </button>
+          )}
+
+          {/* Deep Research Agent Button */}
+          {onOpenDeepResearch && (
+            <button
+              id="deep-research-header-btn"
+              onClick={onOpenDeepResearch}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors cursor-pointer"
+              title="Gemini Deep Research Agent (Interactions API)"
+            >
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span className="hidden sm:inline">Deep Research</span>
+            </button>
+          )}
+
+          {/* Google Workspace (Docs & Slides) Button */}
+          {onOpenWorkspaceModal && (
+            <button
+              id="workspace-header-btn"
+              onClick={onOpenWorkspaceModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
+              title="Google Docs & Slides Integration"
+            >
+              <FileText className="w-4 h-4 text-blue-600" />
+              <span className="hidden sm:inline">Docs &amp; Slides</span>
+            </button>
+          )}
+
           {/* External Notifications Integration */}
           <button
             id="notifications-header-btn"

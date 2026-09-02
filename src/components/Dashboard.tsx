@@ -12,9 +12,20 @@ import { InsightsPanel } from './InsightsPanel';
 interface DashboardProps {
   user: UserProfile;
   onOpenNotifications?: () => void;
+  onOpenWorkspace?: () => void;
+  onOpenDeepResearch?: () => void;
+  onOpenScholar?: () => void;
+  onActiveEntryChange?: (entry: JournalEntry | null) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenNotifications }) => {
+export const Dashboard: React.FC<DashboardProps> = ({
+  user,
+  onOpenNotifications,
+  onOpenWorkspace,
+  onOpenDeepResearch,
+  onOpenScholar,
+  onActiveEntryChange,
+}) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
   const [isLoadingGemini, setIsLoadingGemini] = useState(false);
@@ -64,6 +75,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenNotifications 
       isMounted = false;
     };
   }, [user.uid, createNewEntry]);
+
+  // Propagate active entry to parent for Workspace modals
+  useEffect(() => {
+    onActiveEntryChange?.(activeEntry);
+  }, [activeEntry, onActiveEntryChange]);
 
   // Debounced/direct save helper to Firestore
   const persistEntry = async (entryToSave: JournalEntry) => {
@@ -283,6 +299,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenNotifications 
           onGenerateSummary={handleGenerateSummary}
           isSummarizing={isSummarizing}
           onOpenNotifications={onOpenNotifications}
+          onOpenWorkspace={onOpenWorkspace}
+          onOpenDeepResearch={onOpenDeepResearch}
+          onOpenScholar={onOpenScholar}
         />
       )}
     </div>

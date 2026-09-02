@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and role metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "role": { "type": "string", "enum": ["admin", "editor", "member"] },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["uid", "role"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "Private isolated user journal reflection entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "messages": { "type": "array" },
+        "summary": { "type": "string", "maxLength": 4096 },
+        "sentimentScore": { "type": "number" },
+        "mood": { "type": "string", "maxLength": 64 },
+        "tags": { "type": "array" },
+        "actionItems": { "type": "array" },
+        "keyInsights": { "type": "array" },
+        "location": { "type": "object" },
+        "workspaceExports": { "type": "object" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "title", "createdAt", "updatedAt"]
+    },
+    "Interaction": {
+      "title": "Interaction",
+      "description": "AI reflection prompt synthesis logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "prompt": { "type": "string", "maxLength": 8192 },
+        "response": { "type": "string", "maxLength": 8192 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "Root user document for profile and preferences"
+    },
+    "/users/{userId}/journals/{journalId}": {
+      "schema": { "$ref": "JournalEntry" },
+      "description": "User isolated journal entries and reflections"
+    },
+    "/users/{userId}/interactions/{interactionId}": {
+      "schema": { "$ref": "Interaction" },
+      "description": "AI conversational reflections and synthesis interactions"
+    }
+  }
+}

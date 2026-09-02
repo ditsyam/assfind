@@ -132,7 +132,145 @@ gcloud run services update reflectai \
 
 ---
 
-## 5. Local Development
+## 5. Google Workspace Integration (Docs & Slides)
+
+ReflectAI connects with Google Workspace APIs to export reflection journals and AI syntheses:
+
+- **Google Docs**: Automatically generates structured executive reflection briefs complete with mood metrics, summary, takeaways, actionable items, and full conversation transcripts.
+- **Google Slides**: Generates 4-slide presentation decks (Executive Summary, Emotional Resonance, Key Insights, Action Plan) ready for weekly reflection reviews.
+- **Drive Browser**: Inspect and launch recent Google Docs and Google Slides directly from your connected Google Workspace account.
+
+---
+
+## 6. Gemini Deep Research Agent (`deep-research-preview-04-2026`)
+
+ReflectAI integrates Google's Gemini Deep Research Agent using the Interactions API to execute long-running, multi-step autonomous investigations with citations and auto-visualization:
+
+### Features
+- **Background Interaction Creation**: Initiates asynchronous research tasks (`background: true`) via `ai.interactions.create`.
+- **Status Polling**: Periodically queries `ai.interactions.get(sessionId)` until status reaches `completed` or `failed`.
+- **Multi-Step Aggregation**: Extracts reasoning thoughts, search queries, and model output chunks to render interactive timeline streams.
+- **Journal Integration**: 1-click insertion of completed deep research reports directly into personal journal reflections.
+- **Resilient Fallback Ladder**: If the preview interaction capacity is saturated, automatically cascades through the fallback model hierarchy without disruption.
+
+### Python SDK Reference Implementation
+
+```python
+import os
+import time
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
+client = genai.Client()
+
+def run_deep_research(prompt_query: str):
+    print(f"🚀 Starting Deep Research for: '{prompt_query}'...")
+    interaction = client.interactions.create(
+        agent="deep-research-preview-04-2026",
+        input=prompt_query,
+        background=True,
+        agent_config={
+            "type": "deep-research",
+            "visualization": "auto",
+            "thinking_summaries": "auto",
+        }
+    )
+    
+    interaction_id = interaction.id
+    while True:
+        status_check = client.interactions.get(interaction_id=interaction_id)
+        if status_check.status in ["completed", "COMPLETED"]:
+            print("\n=== RESEARCH COMPLETE ===")
+            print(status_check.output_text)
+            break
+        elif status_check.status in ["failed", "FAILED"]:
+            print("\n❌ Deep Research process failed.")
+            break
+        time.sleep(5)
+```
+
+---
+
+## 7. Google Scholar & Academic Indexing (`scholarly` + `pandas`)
+
+ReflectAI includes built-in scientific literature indexing and researcher profile inspection powered by Google Scholar schemas and Python's `scholarly` library:
+
+- **Researcher Profile Inspection (`cek_indeks_peneliti.py`)**: Resolves researcher profiles (`scholarly.search_author`), extracts complete academic metrics (`scholarly.fill`) including Affiliation, Total Citations (`citedby`), h-index, i10-index, and top publications.
+- **Bibliographic Extraction (`cari_karya_ilmiah.py`)**: Queries academic journals, citations, publication years, venues, and canonical DOI links.
+- **Automated CSV Export**: Exports indexed datasets directly to `hasil_indeks_scholar.csv` matching Pandas DataFrame tabular structures.
+- **Journal Integration**: 1-click citation, author profile, and paper import to journal reflection notes.
+
+### Researcher Profile Inspection (`cek_indeks_peneliti.py`)
+```python
+from scholarly import scholarly
+
+def cek_indeks_peneliti(nama_peneliti):
+    print(f"Mencari profil: {nama_peneliti}...")
+    
+    # Cari penulis berdasarkan nama
+    search_query = scholarly.search_author(nama_peneliti)
+    
+    try:
+        # Ambil hasil pertama yang paling cocok
+        author = next(search_query)
+        
+        # Isi data profil secara lengkap (termasuk isi sitasi dan indeks)
+        full_author_profile = scholarly.fill(author)
+        
+        print("\n=== DATA PROFIL GOOGLE SCHOLAR ===")
+        print(f"Nama       : {full_author_profile['name']}")
+        print(f"Afiliasi   : {full_author_profile.get('affiliation', 'Tidak ada')}")
+        print(f"Total Sitasi: {full_author_profile.get('citedby', 0)}")
+        print(f"h-index    : {full_author_profile.get('hindex', 0)}")
+        print(f"i10-index  : {full_author_profile.get('i10index', 0)}")
+        
+        print("\n=== 3 PUBLIKASI TERATAS ===")
+        for i, pub in enumerate(full_author_profile['publications'][:3]):
+            judul = pub['bib'].get('title', 'No Title')
+            print(f"{i+1}. {judul}")
+            
+    except StopIteration:
+        print("Profil peneliti tidak ditemukan.")
+
+if __name__ == "__main__":
+    cek_indeks_peneliti("Andrew Ng")
+```
+
+### Academic Literature Search (`cari_karya_ilmiah.py`)
+```python
+from scholarly import scholarly
+import pandas as pd
+
+def cari_karya_ilmiah(keyword, jumlah_hasil=5):
+    print(f"Mencari artikel dengan kata kunci: '{keyword}'...\n")
+    search_query = scholarly.search_pubs(keyword)
+    data_artikel = []
+    
+    for i in range(jumlah_hasil):
+        try:
+            artikel = next(search_query)
+            info = {
+                "Judul": artikel['bib'].get('title', 'Tidak ada judul'),
+                "Penulis": ", ".join(artikel['bib'].get('author', [])),
+                "Tahun": artikel['bib'].get('pub_year', 'Tidak diketahui'),
+                "Jurnal/Publisher": artikel['bib'].get('venue', 'Tidak diketahui'),
+                "Jumlah Sitasi": artikel.get('num_citations', 0),
+                "Link": artikel.get('pub_url', 'Tidak ada link')
+            }
+            data_artikel.append(info)
+        except StopIteration:
+            break
+            
+    df = pd.DataFrame(data_artikel)
+    df.to_csv("hasil_indeks_scholar.csv", index=False)
+    print("✅ Data berhasil disimpan ke 'hasil_indeks_scholar.csv'")
+```
+
+---
+
+## 8. Local Development
 
 ```bash
 # Install dependencies

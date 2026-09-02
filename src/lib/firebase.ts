@@ -20,26 +20,40 @@ import {
   query,
   orderBy,
   Firestore,
+  getDocFromServer,
 } from 'firebase/firestore';
 import { JournalEntry, UserProfile, UserRole, AuditLog, NotificationRule } from '../types';
+import appletConfig from '../../firebase-applet-config.json';
+import { WORKSPACE_SCOPES } from './workspace';
 
-// Read config from Vite env
+// Read config from firebase-applet-config.json with Vite env fallback
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: appletConfig.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || '',
+  authDomain: appletConfig.authDomain || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: appletConfig.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: appletConfig.storageBucket || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: appletConfig.messagingSenderId || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: appletConfig.appId || import.meta.env.VITE_FIREBASE_APP_ID || '',
 };
 
 const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey && firebaseConfig.projectId
 );
 
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
+export let app: FirebaseApp | null = null;
+export let auth: Auth | null = null;
+export let db: Firestore | null = null;
+
+// In-memory token cache (never stored in localStorage)
+let cachedAccessToken: string | null = null;
+
+export function getCachedAccessToken(): string | null {
+  return cachedAccessToken;
+}
+
+export function setCachedAccessToken(token: string | null): void {
+  cachedAccessToken = token;
+}
 
 if (isFirebaseConfigured) {
   try {
@@ -51,9 +65,31 @@ if (isFirebaseConfigured) {
   }
 }
 
+// Test Firestore connection on boot as mandated
+export async function testFirestoreConnection(): Promise<boolean> {
+  if (!db) return false;
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firestore offline notice. Please check network connection.');
+    }
+    return false;
+  }
+}
+
+// Trigger connection test non-blockingly
+testFirestoreConnection().catch(() => {});
+
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account',
+});
+
+// Configure Google Docs and Slides Workspace Scopes
+WORKSPACE_SCOPES.forEach((scope) => {
+  googleProvider.addScope(scope);
 });
 
 // Strict Undefined-Stripping (Zero-Crash Payload Hygiene)
@@ -197,6 +233,10 @@ export async function signInWithGoogle(): Promise<UserProfile> {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setCachedAccessToken(credential.accessToken);
+      }
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email,
@@ -267,6 +307,7 @@ export async function signInGuest(): Promise<UserProfile> {
 }
 
 export async function logOut(): Promise<void> {
+  setCachedAccessToken(null);
   if (auth && isFirebaseConfigured) {
     try {
       await firebaseSignOut(auth);
