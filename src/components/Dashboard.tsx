@@ -11,9 +11,10 @@ import { InsightsPanel } from './InsightsPanel';
 
 interface DashboardProps {
   user: UserProfile;
+  onOpenNotifications?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenNotifications }) => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
   const [isLoadingGemini, setIsLoadingGemini] = useState(false);
@@ -281,6 +282,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           entry={activeEntry}
           onGenerateSummary={handleGenerateSummary}
           isSummarizing={isSummarizing}
+          onOpenNotifications={onOpenNotifications}
         />
       )}
     </div>

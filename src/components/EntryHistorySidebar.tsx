@@ -23,15 +23,18 @@ export const EntryHistorySidebar: React.FC<EntryHistorySidebarProps> = ({
   const moods = ['all', 'Inspired', 'Contemplative', 'Focused', 'Grateful', 'Calm', 'Challenged'];
 
   const filteredEntries = entries.filter((entry) => {
+    const q = (searchQuery || '').toLowerCase();
     const matchesSearch =
-      (entry.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (entry.summary || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (entry.tags || []).some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      entry.messages.some((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()));
+      !q ||
+      (entry.title || '').toLowerCase().includes(q) ||
+      (entry.summary || '').toLowerCase().includes(q) ||
+      (entry.tags || []).some((t) => (t || '').toLowerCase().includes(q)) ||
+      (entry.messages || []).some((m) => (m?.content || '').toLowerCase().includes(q));
 
+    const sm = (selectedMood || 'all').toLowerCase();
     const matchesMood =
-      selectedMood === 'all' ||
-      (entry.mood && entry.mood.toLowerCase() === selectedMood.toLowerCase());
+      sm === 'all' ||
+      (entry.mood && (entry.mood || '').toLowerCase() === sm);
 
     return matchesSearch && matchesMood;
   });

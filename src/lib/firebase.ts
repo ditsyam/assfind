@@ -21,7 +21,7 @@ import {
   orderBy,
   Firestore,
 } from 'firebase/firestore';
-import { JournalEntry, UserProfile } from '../types';
+import { JournalEntry, UserProfile, UserRole, AuditLog, NotificationRule } from '../types';
 
 // Read config from Vite env
 const firebaseConfig = {
@@ -70,11 +70,22 @@ export function sanitizePayload<T>(obj: T): T {
 // Local Storage Fallback Store (for immediate seamless preview without configuration blockage)
 const LOCAL_STORAGE_KEY_PREFIX = 'reflectai_journal_entries_';
 const LOCAL_AUTH_USER_KEY = 'reflectai_local_user';
+const LOCAL_AUDIT_LOGS_KEY = 'reflectai_audit_logs';
+const LOCAL_NOTIFICATION_RULES_KEY = 'reflectai_notification_rules';
+const LOCAL_USERS_REGISTRY_KEY = 'reflectai_users_registry';
 
 function getLocalUser(): UserProfile | null {
   try {
     const raw = localStorage.getItem(LOCAL_AUTH_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        ...parsed,
+        role: parsed.role || 'admin',
+      };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -83,12 +94,83 @@ function getLocalUser(): UserProfile | null {
 function setLocalUser(user: UserProfile | null) {
   try {
     if (user) {
-      localStorage.setItem(LOCAL_AUTH_USER_KEY, JSON.stringify(user));
+      const normalizedUser: UserProfile = {
+        ...user,
+        role: user.role || 'admin',
+      };
+      localStorage.setItem(LOCAL_AUTH_USER_KEY, JSON.stringify(normalizedUser));
+      // Also register in users directory
+      const users = getAllRegisteredUsers();
+      const idx = users.findIndex((u) => u.uid === normalizedUser.uid);
+      if (idx >= 0) {
+        users[idx] = normalizedUser;
+      } else {
+        users.push(normalizedUser);
+      }
+      localStorage.setItem(LOCAL_USERS_REGISTRY_KEY, JSON.stringify(users));
     } else {
       localStorage.removeItem(LOCAL_AUTH_USER_KEY);
     }
   } catch (e) {
     console.error('LocalStorage user error:', e);
+  }
+}
+
+export function getAllRegisteredUsers(): UserProfile[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_USERS_REGISTRY_KEY);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        return list.map((u) => ({
+          ...u,
+          role: u.role || 'member',
+        }));
+      }
+    }
+  } catch (e) {
+    console.error('Error reading users registry:', e);
+  }
+  // Default seeded users for RBAC demo
+  return [
+    {
+      uid: 'user_admin_demo',
+      email: 'admin@reflectai.dev',
+      displayName: 'System Admin (ReflectAI)',
+      photoURL: 'https://lh3.googleusercontent.com/a/default-user',
+      isAnonymous: false,
+      role: 'admin',
+    },
+    {
+      uid: 'user_editor_demo',
+      email: 'editor@reflectai.dev',
+      displayName: 'Content Editor',
+      photoURL: 'https://lh3.googleusercontent.com/a/default-user',
+      isAnonymous: false,
+      role: 'editor',
+    },
+    {
+      uid: 'user_member_demo',
+      email: 'member@reflectai.dev',
+      displayName: 'Standard Member',
+      photoURL: 'https://lh3.googleusercontent.com/a/default-user',
+      isAnonymous: false,
+      role: 'member',
+    },
+  ];
+}
+
+export function updateUserRoleLocally(uid: string, newRole: UserRole): void {
+  const users = getAllRegisteredUsers();
+  const idx = users.findIndex((u) => u.uid === uid);
+  if (idx >= 0) {
+    users[idx].role = newRole;
+    localStorage.setItem(LOCAL_USERS_REGISTRY_KEY, JSON.stringify(users));
+  }
+  const current = getLocalUser();
+  if (current && current.uid === uid) {
+    current.role = newRole;
+    setLocalUser(current);
   }
 }
 
@@ -115,22 +197,25 @@ export async function signInWithGoogle(): Promise<UserProfile> {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      return {
+      const profile: UserProfile = {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName || 'Google User',
         photoURL: user.photoURL,
         isAnonymous: false,
+        role: 'admin', // Default to admin for first administrator experience
       };
+      setLocalUser(profile);
+      return profile;
     } catch (err: any) {
       console.warn('Firebase Popup sign-in error or popup blocked, using fallback session:', err?.message);
-      // If popup fails or is blocked in iframe, provision a secure guest user session
       const fallbackUser: UserProfile = {
         uid: 'user_google_' + Math.random().toString(36).substring(2, 9),
-        email: 'user@google.com',
-        displayName: 'Google Authenticated User',
+        email: 'admin@google.com',
+        displayName: 'Google Admin User',
         photoURL: 'https://lh3.googleusercontent.com/a/default-user',
         isAnonymous: false,
+        role: 'admin',
       };
       setLocalUser(fallbackUser);
       return fallbackUser;
@@ -138,11 +223,12 @@ export async function signInWithGoogle(): Promise<UserProfile> {
   } else {
     // Demo / Dev Mode Google sign in emulation
     const fallbackUser: UserProfile = {
-      uid: 'user_google_' + Math.random().toString(36).substring(2, 9),
-      email: 'user@example.com',
-      displayName: 'Google Authenticated User',
+      uid: 'user_admin_demo',
+      email: 'admin@reflectai.dev',
+      displayName: 'Admin User',
       photoURL: 'https://lh3.googleusercontent.com/a/default-user',
       isAnonymous: false,
+      role: 'admin',
     };
     setLocalUser(fallbackUser);
     return fallbackUser;
@@ -154,13 +240,16 @@ export async function signInGuest(): Promise<UserProfile> {
     try {
       const result = await signInAnonymously(auth);
       const user = result.user;
-      return {
+      const guestProfile: UserProfile = {
         uid: user.uid,
         email: null,
         displayName: 'Guest Reflector',
         photoURL: null,
         isAnonymous: true,
+        role: 'admin',
       };
+      setLocalUser(guestProfile);
+      return guestProfile;
     } catch (err) {
       console.warn('Anonymous auth fallback:', err);
     }
@@ -171,6 +260,7 @@ export async function signInGuest(): Promise<UserProfile> {
     displayName: 'Guest Reflector',
     photoURL: null,
     isAnonymous: true,
+    role: 'admin',
   };
   setLocalUser(guestUser);
   return guestUser;
@@ -191,12 +281,14 @@ export function subscribeToAuthChanges(callback: (user: UserProfile | null) => v
   if (auth && isFirebaseConfigured) {
     return onAuthStateChanged(auth, (firebaseUser: User | null) => {
       if (firebaseUser) {
+        const local = getLocalUser();
         callback({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName || (firebaseUser.isAnonymous ? 'Guest User' : 'Authenticated User'),
           photoURL: firebaseUser.photoURL,
           isAnonymous: firebaseUser.isAnonymous,
+          role: local?.role || 'admin',
         });
       } else {
         const localUser = getLocalUser();
@@ -286,6 +378,124 @@ export async function deleteJournalEntryFromFirestore(userId: string, entryId: s
   const existing = getLocalEntries(userId);
   const filtered = existing.filter((e) => e.id !== entryId);
   saveLocalEntries(userId, filtered);
+}
+
+// Audit Logs Service (RBAC & Admin Tracking)
+export async function recordAuditLog(
+  log: Omit<AuditLog, 'id' | 'timestamp'>
+): Promise<AuditLog> {
+  const fullLog: AuditLog = {
+    ...log,
+    id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    timestamp: Date.now(),
+  };
+
+  try {
+    const raw = localStorage.getItem(LOCAL_AUDIT_LOGS_KEY);
+    const logs: AuditLog[] = raw ? JSON.parse(raw) : [];
+    logs.unshift(fullLog);
+    // Keep last 100 logs
+    localStorage.setItem(LOCAL_AUDIT_LOGS_KEY, JSON.stringify(logs.slice(0, 100)));
+  } catch (err) {
+    console.error('Failed to record audit log:', err);
+  }
+
+  return fullLog;
+}
+
+export function fetchAuditLogs(): AuditLog[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_AUDIT_LOGS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to read audit logs:', err);
+  }
+  // Initial seed logs
+  return [
+    {
+      id: 'log_seed_1',
+      timestamp: Date.now() - 3600000 * 2,
+      actorId: 'system',
+      actorEmail: 'system@reflectai.dev',
+      action: 'SYSTEM_BOOT',
+      details: 'RBAC Security boundary and Firestore isolation rules initialized.',
+      severity: 'info',
+    },
+    {
+      id: 'log_seed_2',
+      timestamp: Date.now() - 3600000 * 1,
+      actorId: 'user_admin_demo',
+      actorEmail: 'admin@reflectai.dev',
+      action: 'ROLE_VERIFY',
+      targetId: 'user_admin_demo',
+      details: 'Elevated administrator session verified with full privileges.',
+      severity: 'info',
+    },
+  ];
+}
+
+export function purgeAuditLogs(): void {
+  try {
+    localStorage.setItem(LOCAL_AUDIT_LOGS_KEY, JSON.stringify([]));
+  } catch (err) {
+    console.error('Failed to purge audit logs:', err);
+  }
+}
+
+// Notification Rules Store
+export function getNotificationRules(): NotificationRule[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_NOTIFICATION_RULES_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to read notification rules:', err);
+  }
+  // Default sample rules
+  return [
+    {
+      id: 'rule_slack_breakthrough',
+      name: 'Slack: High Resonance & Breakthroughs',
+      channel: 'slack',
+      destination: 'https://hooks.slack.com/services/DEMO/RESONANCE/REFLECTAI',
+      enabled: true,
+      triggerConditions: {
+        sentimentThreshold: 'high',
+        moods: ['Inspired', 'Excited', 'Focused'],
+      },
+      dispatchCount: 0,
+    },
+    {
+      id: 'rule_discord_stress',
+      name: 'Discord: Overwhelm Alert & Reflection',
+      channel: 'discord',
+      destination: 'https://discord.com/api/webhooks/DEMO/REFLECTAI_ALERT',
+      enabled: true,
+      triggerConditions: {
+        sentimentThreshold: 'low',
+        moods: ['Overwhelmed', 'Challenged'],
+      },
+      dispatchCount: 0,
+    },
+    {
+      id: 'rule_email_actions',
+      name: 'Email: Action Items Digest',
+      channel: 'email',
+      destination: 'angai29@gmail.com',
+      enabled: false,
+      triggerConditions: {
+        requireActionItems: true,
+      },
+      dispatchCount: 0,
+    },
+  ];
+}
+
+export function saveNotificationRules(rules: NotificationRule[]): void {
+  try {
+    localStorage.setItem(LOCAL_NOTIFICATION_RULES_KEY, JSON.stringify(rules));
+  } catch (err) {
+    console.error('Failed to save notification rules:', err);
+  }
 }
 
 export { isFirebaseConfigured };

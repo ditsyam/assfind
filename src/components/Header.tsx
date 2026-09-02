@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Shield, LogOut, Plus, User as UserIcon, BookOpen } from 'lucide-react';
+import { Sparkles, Shield, LogOut, Plus, User as UserIcon, Bell, ShieldAlert } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
@@ -7,6 +7,8 @@ interface HeaderProps {
   onSignOut: () => void;
   onNewEntry: () => void;
   onOpenThreatModal: () => void;
+  onOpenAdminDashboard: () => void;
+  onOpenNotificationsModal: () => void;
   entryCount: number;
 }
 
@@ -15,6 +17,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   onNewEntry,
   onOpenThreatModal,
+  onOpenAdminDashboard,
+  onOpenNotificationsModal,
   entryCount,
 }) => {
   return (
@@ -22,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Logo & Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-xs">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
@@ -33,22 +37,44 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-500 font-medium hidden md:block">
-              Private Journaling & Cognitive Reflection
+              Private Journaling &amp; Cognitive Reflection
             </p>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* External Notifications Integration */}
+          <button
+            id="notifications-header-btn"
+            onClick={onOpenNotificationsModal}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+            title="External Notifications (Slack, Discord, Email)"
+          >
+            <Bell className="w-4 h-4 text-indigo-500" />
+            <span className="hidden lg:inline">Webhooks</span>
+          </button>
+
+          {/* Admin RBAC Dashboard */}
+          <button
+            id="admin-dashboard-header-btn"
+            onClick={onOpenAdminDashboard}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+            title="Admin Dashboard & Role Governance"
+          >
+            <ShieldAlert className="w-4 h-4 text-purple-600" />
+            <span className="hidden sm:inline">Admin RBAC</span>
+          </button>
+
           {/* Security & Threat Model Indicator */}
           <button
             id="view-threat-model-header-btn"
             onClick={onOpenThreatModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-slate-100 border border-slate-200 transition-colors"
             title="View Threat Model & Security Posture"
           >
             <Shield className="w-4 h-4 text-emerald-500" />
-            <span className="hidden md:inline">Security Posture</span>
+            <span className="hidden xl:inline">Threat Model</span>
           </button>
 
           {user && (
@@ -57,10 +83,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="header-new-reflection-btn"
                 onClick={onNewEntry}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Reflection</span>
+                <span className="hidden sm:inline">New Reflection</span>
               </button>
 
               {/* User Profile Pill */}
@@ -77,12 +103,17 @@ export const Header: React.FC<HeaderProps> = ({
                     <UserIcon className="w-4 h-4" />
                   </div>
                 )}
-                <div className="hidden lg:block text-left">
-                  <p className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[140px]">
-                    {user.displayName || (user.isAnonymous ? 'Guest User' : 'Authenticated')}
-                  </p>
-                  <p className="text-[10px] text-slate-500 truncate max-w-[140px]">
-                    {user.email || `${entryCount} saved ${entryCount === 1 ? 'entry' : 'entries'}`}
+                <div className="hidden md:block text-left">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[120px]">
+                      {user.displayName || (user.isAnonymous ? 'Guest User' : 'User')}
+                    </p>
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 bg-purple-100 text-purple-800 rounded">
+                      {user.role || 'member'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 truncate max-w-[120px]">
+                    {user.email || `${entryCount} entries`}
                   </p>
                 </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from './types';
+import { UserProfile, UserRole } from './types';
 import {
   subscribeToAuthChanges,
   signInWithGoogle,
@@ -10,11 +10,15 @@ import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { ThreatModelModal } from './components/ThreatModelModal';
+import { AdminDashboard } from './components/AdminDashboard';
+import { NotificationsModal } from './components/NotificationsModal';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isThreatModalOpen, setIsThreatModalOpen] = useState(false);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [newEntryTriggerKey, setNewEntryTriggerKey] = useState(0);
 
   useEffect(() => {
@@ -44,6 +48,15 @@ export default function App() {
     setNewEntryTriggerKey((k) => k + 1);
   };
 
+  const handleSwitchUserRole = (newRole: UserRole) => {
+    if (currentUser) {
+      setCurrentUser({
+        ...currentUser,
+        role: newRole,
+      });
+    }
+  };
+
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -64,9 +77,15 @@ export default function App() {
             onSignOut={handleSignOut}
             onNewEntry={handleHeaderNewEntry}
             onOpenThreatModal={() => setIsThreatModalOpen(true)}
+            onOpenAdminDashboard={() => setIsAdminDashboardOpen(true)}
+            onOpenNotificationsModal={() => setIsNotificationsModalOpen(true)}
             entryCount={0}
           />
-          <Dashboard key={`${currentUser.uid}_${newEntryTriggerKey}`} user={currentUser} />
+          <Dashboard
+            key={`${currentUser.uid}_${newEntryTriggerKey}`}
+            user={currentUser}
+            onOpenNotifications={() => setIsNotificationsModalOpen(true)}
+          />
         </>
       ) : (
         <LandingPage
@@ -81,6 +100,23 @@ export default function App() {
         isOpen={isThreatModalOpen}
         onClose={() => setIsThreatModalOpen(false)}
       />
+
+      {/* Admin & RBAC Governance Dashboard */}
+      {currentUser && (
+        <AdminDashboard
+          isOpen={isAdminDashboardOpen}
+          onClose={() => setIsAdminDashboardOpen(false)}
+          currentUser={currentUser}
+          onSwitchUserRole={handleSwitchUserRole}
+        />
+      )}
+
+      {/* External Notifications & Webhooks Modal */}
+      <NotificationsModal
+        isOpen={isNotificationsModalOpen}
+        onClose={() => setIsNotificationsModalOpen(false)}
+      />
     </div>
   );
 }
+

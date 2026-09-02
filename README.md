@@ -1,6 +1,6 @@
 # ReflectAI - User-Authenticated Journal & Reflection Assistant
 
-A private, AI-augmented journaling web application that integrates Google's **Gemini 3.6 Flash API** with **Cloud Firestore** and **Firebase Authentication**. Built with an Express + Vite full-stack architecture, owner-isolated database security rules, and resilient automated fallback ladders.
+A private, AI-augmented journaling web application that integrates Google's **Gemini 3.6 Flash API** with **Cloud Firestore**, **Firebase Authentication**, **Google Maps Platform**, and **Outbound Webhook Notifications (Slack / Discord)**. Built with an Express + Vite full-stack architecture, owner-isolated database security rules, role-based access control (RBAC), and resilient automated fallback ladders.
 
 ---
 
@@ -10,7 +10,9 @@ A private, AI-augmented journaling web application that integrates Google's **Ge
 | :--- | :--- | :--- |
 | **User Identity** | Firebase Authentication | Federated Google Sign-In (no passwords stored or managed) |
 | **Backend Database** | Cloud Firestore | User-isolated document storage for reflections and structured insights |
-| **AI Processing Engine** | Gemini 3.6 Flash API | Generates contextual multi-turn reflections and executive summaries |
+| **AI Processing Engine** | Gemini 3.6 Flash API | Contextual multi-turn reflections, sentiment analysis, and summaries |
+| **Location Services** | Google Maps Platform | Server-proxied geocoding and interactive Sanctuary mapping |
+| **Integrations & Alerts** | Webhooks / Notifications | SSRF-safe outbound alerts for Slack, Discord, and custom HTTP endpoints |
 | **Secret Management** | Google Cloud Secret Manager | Dynamic API key injection without client exposure |
 | **Hosting & Runtime** | Google Cloud Run (Node.js/Express) | Scalable, containerized full-stack deployment |
 
@@ -34,20 +36,28 @@ gcloud services enable \
 
 ---
 
-## 2. Secret Manager Setup
+## 2. Secret Management Setup
 
-Store your Gemini API key securely in Google Cloud Secret Manager and grant access to the Cloud Run service account.
+Store your Gemini API key and Google Maps API key securely in Google Cloud Secret Manager and grant access to the Cloud Run service account.
 
 ```bash
 # 1. Create and populate the GEMINI_API_KEY secret
 gcloud secrets create GEMINI_API_KEY --replication-policy="automatic"
 echo -n "YOUR_GEMINI_API_KEY" | gcloud secrets versions add GEMINI_API_KEY --data-file=-
 
-# 2. Retrieve your GCP Project Number
+# 2. (Optional) Create GOOGLE_MAPS_API_KEY secret
+gcloud secrets create GOOGLE_MAPS_API_KEY --replication-policy="automatic"
+echo -n "YOUR_MAPS_API_KEY" | gcloud secrets versions add GOOGLE_MAPS_API_KEY --data-file=-
+
+# 3. Retrieve your GCP Project Number
 PROJECT_NUMBER=$(gcloud projects describe YOUR_PROJECT_ID --format='value(projectNumber)')
 
-# 3. Grant the default Cloud Run compute service account permission to access the secret
+# 4. Grant the default Cloud Run compute service account permission to access the secrets
 gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding GOOGLE_MAPS_API_KEY \
   --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 ```
@@ -106,7 +116,7 @@ gcloud run deploy reflectai \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-secrets GEMINI_API_KEY=GEMINI_API_KEY:latest \
+  --set-secrets GEMINI_API_KEY=GEMINI_API_KEY:latest,GOOGLE_MAPS_API_KEY=GOOGLE_MAPS_API_KEY:latest \
   --set-env-vars NODE_ENV=production
 ```
 

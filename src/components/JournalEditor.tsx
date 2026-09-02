@@ -12,9 +12,14 @@ import {
   Lightbulb,
   AlertCircle,
   HelpCircle,
+  MapPin,
+  X,
+  Compass,
 } from 'lucide-react';
-import { JournalEntry, ChatMessage, PromptSpark } from '../types';
+import { JournalEntry, ChatMessage, PromptSpark, JournalLocation } from '../types';
 import { PROMPT_SPARKS } from '../lib/sparks';
+import { LocationPickerModal } from './LocationPickerModal';
+import { JournalMapView } from './JournalMapView';
 
 interface JournalEditorProps {
   entry: JournalEntry;
@@ -37,6 +42,8 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [showEmbeddedMap, setShowEmbeddedMap] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -86,19 +93,31 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleSetLocation = (loc: JournalLocation | null) => {
+    onUpdateEntry({ location: loc || undefined });
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-hidden">
+      {/* Location Picker Modal */}
+      <LocationPickerModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        currentLocation={entry.location}
+        onSelectLocation={handleSetLocation}
+      />
+
       {/* Editor Top Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
-        {/* Title & Mood Selection */}
-        <div className="flex-1 min-w-[260px] flex items-center gap-3">
+        {/* Title, Mood Selection & Location Pin */}
+        <div className="flex-1 min-w-[260px] flex flex-wrap items-center gap-2.5">
           <input
             id="journal-title-input"
             type="text"
             value={entry.title}
             onChange={(e) => onUpdateEntry({ title: e.target.value })}
             placeholder="Title your reflection..."
-            className="text-base sm:text-lg font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-hidden transition-all w-full max-w-md"
+            className="text-base sm:text-lg font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-hidden transition-all w-full max-w-xs sm:max-w-sm"
           />
 
           {/* Mood Selector Pill */}
@@ -116,6 +135,39 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Location Pin Pill */}
+          {entry.location ? (
+            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg px-2.5 py-1 text-xs font-semibold">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <button
+                type="button"
+                onClick={() => setIsLocationModalOpen(true)}
+                className="hover:underline truncate max-w-[130px]"
+                title="Change location"
+              >
+                {entry.location.placeName}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLocation(null)}
+                className="text-indigo-400 hover:text-indigo-800 ml-1 p-0.5"
+                title="Remove location"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              id="add-location-btn"
+              type="button"
+              onClick={() => setIsLocationModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 border border-slate-200 rounded-lg transition-colors"
+            >
+              <MapPin className="w-3.5 h-3.5 text-slate-500" />
+              <span>Pin Location</span>
+            </button>
+          )}
         </div>
 
         {/* Save & Isolation Status */}
@@ -159,8 +211,27 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
         </div>
       )}
 
-      {/* Messages Canvas */}
+      {/* Messages & Location Canvas */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6">
+        {/* Pinned Location Map Preview Banner if pinned */}
+        {entry.location && showEmbeddedMap && (
+          <div className="max-w-3xl mx-auto mb-2">
+            <div className="flex items-center justify-between mb-1.5 text-xs text-slate-500">
+              <span className="font-bold flex items-center gap-1 text-slate-700">
+                <Compass className="w-3.5 h-3.5 text-indigo-600" /> Pinned Reflection Sanctuary
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowEmbeddedMap(false)}
+                className="text-[11px] hover:text-slate-800 underline"
+              >
+                Hide map banner
+              </button>
+            </div>
+            <JournalMapView location={entry.location} height="160px" />
+          </div>
+        )}
+
         {/* Starter Sparks Carousel if conversation is fresh */}
         {entry.messages.length === 0 && (
           <div className="max-w-2xl mx-auto space-y-4 my-4">

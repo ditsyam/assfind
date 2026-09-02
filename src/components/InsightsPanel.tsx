@@ -1,17 +1,19 @@
 import React from 'react';
-import { Sparkles, CheckSquare, Lightbulb, HelpCircle, Tag, Download, RefreshCw, BarChart2 } from 'lucide-react';
+import { Sparkles, CheckSquare, Lightbulb, HelpCircle, Tag, Download, RefreshCw, BarChart2, MapPin, Send, Bell } from 'lucide-react';
 import { JournalEntry } from '../types';
 
 interface InsightsPanelProps {
   entry: JournalEntry | null;
   onGenerateSummary: () => Promise<void>;
   isSummarizing: boolean;
+  onOpenNotifications?: () => void;
 }
 
 export const InsightsPanel: React.FC<InsightsPanelProps> = ({
   entry,
   onGenerateSummary,
   isSummarizing,
+  onOpenNotifications,
 }) => {
   if (!entry) {
     return null;
@@ -21,6 +23,7 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
     const md = `# ${entry.title || 'Journal Reflection'}
 *Date: ${new Date(entry.updatedAt).toLocaleString()}*
 *Mood: ${entry.mood || 'Reflective'}*
+${entry.location ? `*Location: ${entry.location.placeName} (${entry.location.address || ''})*` : ''}
 
 ## Executive Summary
 ${entry.summary || 'No summary generated.'}
@@ -57,10 +60,19 @@ ${entry.messages
           <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
             <Sparkles className="w-4 h-4" />
           </div>
-          <h2 className="text-sm font-bold text-slate-900">AI Synthesis & Insights</h2>
+          <h2 className="text-sm font-bold text-slate-900">AI Synthesis &amp; Insights</h2>
         </div>
 
         <div className="flex items-center gap-1.5">
+          {onOpenNotifications && (
+            <button
+              onClick={onOpenNotifications}
+              className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              title="Push to Slack/Discord Webhooks"
+            >
+              <Bell className="w-4 h-4" />
+            </button>
+          )}
           <button
             id="export-markdown-btn"
             onClick={handleExport}
@@ -75,7 +87,7 @@ ${entry.messages
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Summarize Action Card */}
-        <div className="p-3.5 bg-gradient-to-br from-indigo-50/70 to-violet-50/70 border border-indigo-100 rounded-xl">
+        <div className="p-3.5 bg-linear-to-br from-indigo-50/70 to-violet-50/70 border border-indigo-100 rounded-xl">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-indigo-950">Gemini Synthesis</span>
             <span className="text-[10px] font-medium text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-100">
@@ -83,18 +95,32 @@ ${entry.messages
             </span>
           </div>
           <p className="text-xs text-indigo-800/80 mb-3 leading-relaxed">
-            Distill your journal dialogue into clear summaries, takeaways, and next steps.
+            Distill your journal dialogue into clear summaries, emotional resonance, and actionable next steps.
           </p>
           <button
             id="generate-summary-btn"
             onClick={onGenerateSummary}
             disabled={isSummarizing || entry.messages.length === 0}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSummarizing ? 'animate-spin' : ''}`} />
             <span>{isSummarizing ? 'Analyzing & Synthesizing...' : entry.summary ? 'Regenerate Insights' : 'Synthesize Insights'}</span>
           </button>
         </div>
+
+        {/* Location Sanctuary info if pinned */}
+        {entry.location && (
+          <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs">
+            <div className="flex items-center gap-1.5 text-indigo-900 font-bold mb-1">
+              <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Location Sanctuary</span>
+            </div>
+            <p className="text-indigo-800 font-medium">{entry.location.placeName}</p>
+            {entry.location.address && (
+              <p className="text-[11px] text-indigo-600/80 truncate mt-0.5">{entry.location.address}</p>
+            )}
+          </div>
+        )}
 
         {/* Executive Summary */}
         {entry.summary ? (
@@ -133,7 +159,7 @@ ${entry.messages
               <div>
                 <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5 text-slate-400" />
-                  Key Themes & Tags
+                  Key Themes &amp; Tags
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {entry.tags.map((tag, idx) => (
@@ -213,3 +239,4 @@ ${entry.messages
     </div>
   );
 };
+
